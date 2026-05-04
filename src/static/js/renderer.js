@@ -206,7 +206,11 @@ try {
 
       const header = document.createElement("div");
       header.className = "q-header";
-      header.innerHTML = `<span class="q-index">${qIdx + 1}</span><div class="q-text fill-blank-text" id="fb-text-${qIdx}"></div>`;
+      const textDiv = document.createElement("div");
+      textDiv.className = "q-text fill-blank-text";
+      textDiv.id = `fb-text-${qIdx}`;
+      header.innerHTML = `<span class="q-index">${qIdx + 1}</span>`;
+      header.appendChild(textDiv);
       div.appendChild(header);
 
       // Replace ___ with input fields
@@ -217,11 +221,7 @@ try {
         blankIdx++;
         return input;
       });
-      // Need to set innerHTML after creating header
-      setTimeout(() => {
-        const textEl = document.getElementById(`fb-text-${qIdx}`);
-        if (textEl) textEl.innerHTML = html;
-      }, 0);
+      textDiv.innerHTML = html;
 
       return div;
     }
@@ -424,7 +424,11 @@ try {
 
       const header = document.createElement("div");
       header.className = "q-header";
-      header.innerHTML = `<span class="q-index">${qIdx + 1}</span><div class="q-text cloze-text" id="cloze-text-${qIdx}"></div>`;
+      const textDiv = document.createElement("div");
+      textDiv.className = "q-text cloze-text";
+      textDiv.id = `cloze-text-${qIdx}`;
+      header.innerHTML = `<span class="q-index">${qIdx + 1}</span>`;
+      header.appendChild(textDiv);
       div.appendChild(header);
 
       // Build HTML: replace ___N___ with select dropdowns
@@ -445,10 +449,7 @@ try {
         return `<select class="cloze-select" id="cloze-${qIdx}-${num}" data-q="${qIdx}" data-b="${num}"><option value="">(${num})</option>${opts}</select>`;
       });
 
-      setTimeout(() => {
-        const textEl = document.getElementById(`cloze-text-${qIdx}`);
-        if (textEl) textEl.innerHTML = html;
-      }, 0);
+      textDiv.innerHTML = html;
 
       return div;
     }
@@ -461,7 +462,11 @@ try {
 
       const header = document.createElement("div");
       header.className = "q-header";
-      header.innerHTML = `<span class="q-index">${qIdx + 1}</span><div class="q-text cloze-text" id="cloze-text-${qIdx}"></div>`;
+      const textDiv = document.createElement("div");
+      textDiv.className = "q-text cloze-text";
+      textDiv.id = `cloze-text-${qIdx}`;
+      header.innerHTML = `<span class="q-index">${qIdx + 1}</span>`;
+      header.appendChild(textDiv);
       div.appendChild(header);
 
       let html = _escapeHtml(q.text);
@@ -495,7 +500,7 @@ try {
           return `<select class="cloze-select" id="scf-${qIdx}-${num}" data-q="${qIdx}" data-b="${num}"><option value="">(${num})</option>${opts}</select>`;
         });
 
-        // Add options sidebar
+        // Add options sidebar (after a tick so it appends after the text is in DOM)
         setTimeout(() => {
           const textEl = document.getElementById(`cloze-text-${qIdx}`);
           if (textEl && q.options) {
@@ -514,10 +519,7 @@ try {
         }, 0);
       }
 
-      setTimeout(() => {
-        const textEl = document.getElementById(`cloze-text-${qIdx}`);
-        if (textEl) textEl.innerHTML = html;
-      }, 0);
+      textDiv.innerHTML = html;
 
       return div;
     }
