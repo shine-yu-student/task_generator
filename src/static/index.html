@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高考题目生成器</title>
+<meta http-equiv="Cache-Control" content=""no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+
+<!-- CSS -->
+<link rel="stylesheet" href="/css/style.css">
+
+<!-- MathJax -->
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] },
+  startup: { typeset: false }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+
+<!-- Mermaid (async to avoid blocking) -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" async></script>
+
+</head>
+<body>
+
+<!-- ===== Top Bar ===== -->
+<div class="topbar">
+  <select id="selSubject">
+    <option value="math">数学</option>
+    <option value="physics">物理</option>
+    <option value="chemistry">化学</option>
+    <option value="biology">生物</option>
+    <option value="english">英语</option>
+  </select>
+  <select id="selGrade">
+    <option value="高三">高三</option>
+    <option value="高二">高二</option>
+    <option value="高一">高一</option>
+  </select>
+  <select id="selDifficulty">
+    <option value="高考">高考难度</option>
+    <option value="提高">提高</option>
+    <option value="基础">基础</option>
+  </select>
+  <select id="selType"></select>
+  <input type="text" id="topicInput" class="topic-input" placeholder="知识点/题材（可选，如：三角函数）">
+  <button class="btn-generate" id="btnGenerate">生成题目</button>
+  <div class="action-dropdown">
+    <button class="btn-action" id="btnAction">操作 ▾</button>
+    <div class="action-menu" id="actionMenu" style="display:none">
+      <button id="menuSubmit" disabled>提交答案</button>
+      <button id="menuShowAnswer" disabled>查看答案</button>
+      <button id="menuExportJSON" disabled>导出JSON</button>
+      <button id="menuImportJSON">导入JSON</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Main Area ===== -->
+<div class="main">
+  <!-- Left: Questions -->
+  <div class="panel panel-left" id="panelLeft" style="width:55%">
+    <div class="placeholder" id="placeholderLeft">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h5v7h7v9H6z"/></svg>
+      选择科目后点击「生成题目」
+    </div>
+    <h2 id="questionsTitle" style="display:none">题目</h2>
+    <div id="questionsContainer"></div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider" id="divider"></div>
+
+  <!-- Right: Answer & Results -->
+  <div class="panel panel-right" id="panelRight" style="width:calc(45% - 6px)">
+    <div class="placeholder" id="placeholderRight">
+      <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      阅读题目后在此作答
+    </div>
+    <div id="scoreDisplay" style="display:none"></div>
+    <div id="answersContainer"></div>
+  </div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar" id="statusBar">就绪</div>
+
+<!-- Hidden file input for JSON import -->
+<input type="file" id="jsonFileInput" accept=".json" style="display:none">
+
+<!-- ===== Generate Modal ===== -->
+<div class="modal-overlay" id="generateModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>生成题目</h3>
+      <button class="modal-close" id="btnModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-left">
+        <div class="modal-section">
+          <label>初始 Prompt（JSON 规范）<button class="btn-copy" id="btnCopyInitial">复制</button></label>
+          <textarea id="modalInitialPrompt" readonly></textarea>
+        </div>
+        <div class="modal-section">
+          <label>单题 Prompt<button class="btn-copy" id="btnCopyQuestion">复制</button></label>
+          <textarea id="modalQuestionPrompt" readonly></textarea>
+        </div>
+      </div>
+      <div class="modal-right">
+        <label>粘贴大模型输出</label>
+        <textarea id="modalOutput" placeholder="将大模型生成的题目JSON粘贴到此处..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-import" id="btnImport">导入题目</button>
+      <button class="btn-cancel" id="btnCancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inline probe: test if external scripts can execute at all -->
+<script>
+window.__scriptProbe = { loaded: [] };
+</script>
+
+<!-- JS modules: each with onerror for load failure detection -->
+<script src="/js/api.js" onerror="console.error('[load] api.js FAILED to load (network/404)')"></script>
+<script src="/js/renderer.js" onerror="console.error('[load] renderer.js FAILED to load (network/404)')"></script>
+<script src="/js/grader.js" onerror="console.error('[load] grader.js FAILED to load (network/404)')"></script>
+<script src="/js/mermaid-init.js" onerror="console.error('[load] mermaid-init.js FAILED to load (network/404)')"></script>
+<script src="/js/app.js" onerror="console.error('[load] app.js FAILED to load (network/404)')"></script>
+
+<!-- Global health check -->
+<script>
+(function() {
+  var mods = ['API','Renderer','Grader','MermaidInit','App'];
+  var missing = mods.filter(function(m) { return !window[m]; });
+  var loaded = mods.filter(function(m) { return !!window[m]; });
+  console.log('[task_generator] Loaded: ' + (loaded.length ? loaded.join(', ') : '(none)'));
+  console.log('[task_generator] Script probe: ' + JSON.stringify(window.__scriptProbe));
+  if (missing.length) {
+    console.error('[task_generator] Modules not loaded: ' + missing.join(', '));
+    var sb = document.getElementById('statusBar');
+    if (sb) sb.textContent = '加载失败: ' + missing.join(', ') + ' — 请检查浏览器控制台(F12)';
+  }
+})();
+</script>
+
+</body>
+</html>
