@@ -154,6 +154,7 @@ try {
         );
 
         _processMermaidInQuestions(paper);
+        _processGclcInQuestions(paper);
         _setActionButtonsEnabled(true);
 
         closeGenerateModal();
@@ -272,6 +273,65 @@ try {
       MermaidInit.renderAll();
     }
 
+    function _processGclcInQuestions(paper) {
+      for (var i = 0; i < paper.questions.length; i++) {
+        if (!paper.questions[i].gclc) continue;
+        var block = document.getElementById("qblock-" + i);
+        if (!block) continue;
+
+        var container = document.createElement("div");
+        container.className = "gclc-container";
+        container.id = "gclc-" + i;
+        container.innerHTML =
+          '<div class="gclc-loading">加载图形...</div>';
+        block.appendChild(container);
+
+        _fetchAndRenderGclc(i, paper.questions[i].gclc, container);
+      }
+    }
+
+    function _fetchAndRenderGclc(idx, code, container) {
+      fetch("/export-gclc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code }),
+      })
+        .then(function (res) {
+          var contentType = res.headers.get("Content-Type") || "";
+          if (contentType.indexOf("image/svg+xml") !== -1) {
+            return res.text().then(function (svg) {
+              container.innerHTML = svg;
+            });
+          }
+          return res.json().then(function (data) {
+            if (data.rendered === false) {
+              container.innerHTML =
+                '<pre class="gclc-code-fallback">' +
+                _escapeHtml(code) +
+                "</pre>" +
+                '<div class="gclc-fallback-note">GCLC 未安装，以上为原始 GCLC 代码，可用 <a href="http://poincare.matf.bg.ac.rs/~janicic/gclc/" target="_blank">GCLC</a> 渲染</div>';
+            }
+          });
+        })
+        .catch(function (err) {
+          console.warn("GCLC render error:", err);
+          container.innerHTML =
+            '<pre class="gclc-code-fallback">' +
+            _escapeHtml(code) +
+            "</pre>" +
+            '<div class="gclc-fallback-note">GCLC 渲染失败，以上为原始代码</div>';
+        });
+    }
+
+    function _escapeHtml(s) {
+      if (typeof s !== "string") return "";
+      return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
     function _initDivider() {
       var divider = document.getElementById("divider");
       var panelLeft = document.getElementById("panelLeft");
@@ -359,6 +419,7 @@ try {
           );
 
           _processMermaidInQuestions(paper);
+          _processGclcInQuestions(paper);
           _setActionButtonsEnabled(true);
           setStatus("JSON 文件导入成功");
         } catch (err) {

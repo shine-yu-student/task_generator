@@ -40,6 +40,10 @@ try {
       return _post("/export-mermaid", { code: code });
     }
 
+    function exportGclc(code) {
+      return _post("/export-gclc", { code: code });
+    }
+
     function extractJSON(text) {
       var match = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
       if (match) return match[1].trim();
@@ -53,6 +57,7 @@ try {
     return {
       fetchPrompts: fetchPrompts,
       exportMermaid: exportMermaid,
+      exportGclc: exportGclc,
       extractJSON: extractJSON,
     };
   })();

@@ -94,6 +94,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/export-mermaid":
             self._handle_export_mermaid()
+        elif self.path == "/export-gclc":
+            self._handle_export_gclc()
         else:
             self.send_error(404)
 
@@ -219,6 +221,59 @@ class Handler(SimpleHTTPRequestHandler):
         self._json_response(200, {"mermaid": mermaid_code, "rendered": False})
 
     # ------------------------------------------------------------------ #
+    #  POST /export-gclc  —  Render GCLC geometry to SVG                  #
+    # ------------------------------------------------------------------ #
+    def _handle_export_gclc(self):
+        body = self._read_body()
+        if body is None:
+            return
+
+        try:
+            req = json.loads(body)
+        except json.JSONDecodeError:
+            self._json_error(400, "Invalid JSON body")
+            return
+
+        gclc_code = req.get("code", "")
+        if not gclc_code:
+            self._json_error(400, "Missing 'code' field")
+            return
+
+        os.makedirs(IMAGE_DIR, exist_ok=True)
+        gcl_id = uuid.uuid4().hex[:12]
+        gcl_path = os.path.join(IMAGE_DIR, f"{gcl_id}.gcl")
+        svg_path = os.path.join(IMAGE_DIR, f"{gcl_id}.svg")
+
+        with open(gcl_path, "w", encoding="utf-8") as f:
+            f.write(gclc_code)
+
+        gclc_bin = shutil.which("gclc")
+        if gclc_bin:
+            try:
+                subprocess.run(
+                    [gclc_bin, gcl_path, svg_path, "-svg"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if os.path.isfile(svg_path):
+                    with open(svg_path, "r", encoding="utf-8") as f:
+                        svg = f.read()
+                    os.remove(gcl_path)
+                    os.remove(svg_path)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/svg+xml")
+                    self._cors_headers()
+                    self.end_headers()
+                    self.wfile.write(svg.encode("utf-8"))
+                    return
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+
+        os.remove(gcl_path) if os.path.exists(gcl_path) else None
+        self._json_response(200, {"gclc": gclc_code, "rendered": False})
+
+    # ------------------------------------------------------------------ #
     #  Helpers                                                            #
     # ------------------------------------------------------------------ #
     def _read_body(self):
@@ -280,6 +335,7 @@ def main():
         f"Prompts:   GET  http://localhost:{args.port}/api/prompts?subject=math&grade=高三&difficulty=高考&type=single_choice"
     )
     print(f"Mermaid:   POST http://localhost:{args.port}/export-mermaid")
+    print(f"GCLC:      POST http://localhost:{args.port}/export-gclc")
     print(f"Static dir: {STATIC_DIR}")
     print(f"Declaration dir: {DECLARATION_DIR}")
     print(f"Image dir: {IMAGE_DIR}")
